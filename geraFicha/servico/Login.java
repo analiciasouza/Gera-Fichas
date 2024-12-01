@@ -1,5 +1,6 @@
 package geraFicha.servico;
 
+import geraFicha.database.DatabaseService;
 import geraFicha.entidade.Personagem;
 
 import java.util.ArrayList; // criar listas dinâmicas que podem crescer e encolher conforme os elementos são adicionados ou removidos.
@@ -9,11 +10,12 @@ import java.util.Map; // mapear usuários a senhas e personagens a usuários.
 import java.util.Scanner; // para capturar entradas do usuário via console.
 
 public class Login {
+
     private static final Scanner scanner = new Scanner(System.in);
     private Map<String, String> usuarios; // armazena usuários e suas respectivas senhas
     private Map<String, List<Personagem>> personagensPorUsuario; // armazena personagens associados a cada usuário
     private String usuarioLogado; // armazena o nome do usuário logado
-
+    private DatabaseService db = new DatabaseService();
     public Login() {
         usuarios = new HashMap<>(); // inicializa o mapa de usuários
         personagensPorUsuario = new HashMap<>(); // inicializa o mapa de personagens por usuário
@@ -22,6 +24,7 @@ public class Login {
     public boolean entrar() {
         System.out.print("\nDigite o seu usuário: ");
         String username = scanner.next();
+
 
         if (!usuarios.containsKey(username)) {
             System.out.println("\nUsuário não encontrado.\n");
@@ -70,10 +73,15 @@ public class Login {
         else {
             System.out.print("Digite a senha: ");
             String novaSenha = scanner.next();
+
+            db.inserirUsuario(novoUsuario, novaSenha);
+
             usuarios.put(novoUsuario, novaSenha);
             personagensPorUsuario.put(novoUsuario, new ArrayList<>()); // inicializa a lista de personagens do usuário
             System.out.println("Usuário cadastrado com sucesso.");
         }
+
+        db.listarUsuarios();
     }
 
     public void cadastrarPersonagem(String usuario) {
@@ -127,6 +135,8 @@ public class Login {
                 return; // encerra o método se a classe for inválida
         }
 
+
+
         Personagem personagem = new Personagem(nome, classe); // cria o personagem com o nome e classe
         personagens.add(personagem); // adiciona o personagem à lista
         System.out.println("Personagem cadastrado com sucesso.");
@@ -138,6 +148,9 @@ public class Login {
         System.out.println("Força: " + personagem.getForca() + " (d6)");
         System.out.println("Destreza: " + personagem.getDestreza() + " (d6)");
         System.out.println("Inteligência: " + personagem.getInteligencia() + " (d6)");
+
+        db.inserirPersonagem(nome, classeEscolhida, vida);
+
     }
 
     public void exibirPersonagens(String usuario) {
@@ -164,6 +177,8 @@ public class Login {
                 System.out.println(); // linha em branco entre os personagens
             }
         }
+
+        db.listarPersonagens();
     }
 
     public void excluirPersonagem(String usuario) {
