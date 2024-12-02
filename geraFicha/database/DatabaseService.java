@@ -2,8 +2,9 @@ package geraFicha.database;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import geraFicha.Atributos;
+import java.util.Map;
 
 public class DatabaseService {
     private static final String URL = "jdbc:postgresql://localhost:5432/FichasRPG"; // Atualize com a URL do seu banco
@@ -61,8 +62,11 @@ public class DatabaseService {
 
     }
 
+
+
+
     // Inserir um personagem
-    public void inserirPersonagem(String nome, int idClasse, vida) {
+    public void inserirPersonagem(String nome, int idClasse, int vida) {
         this.abrirConexao();
         String sql = "INSERT INTO personagens (personagem_nome, id_classe, vida) VALUES (?, ?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -77,36 +81,63 @@ public class DatabaseService {
         this.fecharConexao();
     }
 
-    // Listar personagens
-    public List<String> listarPersonagens() {
+
+    public Map<String, String> listarUsuariosComSenha() {
         this.abrirConexao();
-        List<String> personagens = new ArrayList<>();
-        String sql = "SELECT personagem_nome FROM personagens";
+        Map<String, String> usuarios = new HashMap<>();
+        String sql = "SELECT usuario_nome, usuario_senha FROM usuario";
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                personagens.add(rs.getString("personagem_nome"));
+                usuarios.put(rs.getString("usuario_nome"), rs.getString("usuario_senha"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            this.fecharConexao();
+        }
+        return usuarios;
+    }
+
+    public void excluirUsuario(String nome) {
+        this.abrirConexao();
+        String sql = "DELETE FROM usuario WHERE usuario_nome = ?";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, nome);
+            int rowsAffected = stmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                System.out.println("Usuário excluído do banco de dados.");
+            } else {
+                System.out.println("Usuário não encontrado no banco de dados.");
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         this.fecharConexao();
-        return personagens;
     }
 
 
-    public void excluirPersonagem(String nome, int idClasse) {
+    public boolean excluirPersonagem(String nome) {
         this.abrirConexao();
-        String sql = "DELETE FROM personagens WHERE nome = ? AND idClasse = ?";
+        String sql = "DELETE FROM personagens WHERE personagem_nome = ?";
+
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, nome);
-            stmt.setInt(2, idClasse);
+
             int rowsAffected = stmt.executeUpdate();
-            System.out.println(rowsAffected + " personagem(ns) excluído(s).");
-        } catch (SQLException e) {
-            e.printStackTrace();
+
+            return rowsAffected > 0; // Retorna true se a exclusão foi bem-sucedida
         }
-        this.fecharConexao();
+
+        catch (SQLException e) {
+            e.printStackTrace();
+            return false;  }
+
+        finally {
+            this.fecharConexao();
+        }
     }
 
 
@@ -125,4 +156,6 @@ public class DatabaseService {
             e.printStackTrace();
         }
     }
+
+
 }

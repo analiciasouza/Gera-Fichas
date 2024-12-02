@@ -110,33 +110,9 @@ public class PersonagemServico {
             }
         }
 
-        public void excluirPersonagem(String usuario) {
-            if (!usuarios.containsKey(usuario)) {
-                System.out.println("Usuário não encontrado.");
-                return;
-            }
 
-            List<Personagem> personagens = personagensPorUsuario.get(usuario);
 
-            if (personagens.isEmpty()) {
-                System.out.println("Nenhum personagem cadastrado para este usuário.");
-                return;
-            }
+public void excluirPersonagem(String usuario) {
 
-            System.out.println("Escolha o número do personagem a ser excluído:");
-            for (int i = 0; i < personagens.size(); i++) {
-                System.out.println((i + 1) + ". " + personagens.get(i).getNome());
-            }
-            int numero = scanner.nextInt() - 1;
 
-            if (numero >= 0 && numero < personagens.size()) {
-                personagens.remove(numero);
-                System.out.println("Personagem excluído com sucesso.");
-            }
-
-            else {
-                System.out.println("Número inválido.");
-            }
-        }
-    }
-
+    } }

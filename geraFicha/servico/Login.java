@@ -3,28 +3,30 @@ package geraFicha.servico;
 import geraFicha.database.DatabaseService;
 import geraFicha.entidade.Personagem;
 
-import java.util.ArrayList; // criar listas dinâmicas que podem crescer e encolher conforme os elementos são adicionados ou removidos.
-import java.util.HashMap; // gerenciar usuários e suas respectivas senhas.
-import java.util.List; // para usar listas de personagens.
-import java.util.Map; // mapear usuários a senhas e personagens a usuários.
-import java.util.Scanner; // para capturar entradas do usuário via console.
+import java.util.*;
 
 public class Login {
-
     private static final Scanner scanner = new Scanner(System.in);
-    private Map<String, String> usuarios; // armazena usuários e suas respectivas senhas
-    private Map<String, List<Personagem>> personagensPorUsuario; // armazena personagens associados a cada usuário
-    private String usuarioLogado; // armazena o nome do usuário logado
-    private DatabaseService db = new DatabaseService();
+    private Map<String, String> usuarios; // Armazena usuários e suas respectivas senhas
+    private Map<String, List<Personagem>> personagensPorUsuario; // Armazena personagens associados a cada usuário
+    private String usuarioLogado; // Armazena o nome do usuário logado
+    private DatabaseService db; // Serviço de banco de dados
+
     public Login() {
-        usuarios = new HashMap<>(); // inicializa o mapa de usuários
-        personagensPorUsuario = new HashMap<>(); // inicializa o mapa de personagens por usuário
+        db = new DatabaseService();
+        usuarios = db.listarUsuariosComSenha(); // Carrega os usuários e senhas do banco
+        personagensPorUsuario = new HashMap<>(); // Inicializa o mapa de personagens por usuário
+
+        if (usuarios.isEmpty()) {
+            System.out.println("Nenhum usuário encontrado no banco de dados.");
+        } else {
+            System.out.println("Usuários carregados: " + usuarios.keySet());
+        }
     }
 
     public boolean entrar() {
         System.out.print("\nDigite o seu usuário: ");
         String username = scanner.next();
-
 
         if (!usuarios.containsKey(username)) {
             System.out.println("\nUsuário não encontrado.\n");
@@ -32,7 +34,7 @@ public class Login {
             System.out.println("2. Cadastrar novo usuário\n");
             System.out.print("Escolha uma opção: ");
             int opcao = scanner.nextInt();
-            PersonagemServico personagemServico = new PersonagemServico(usuarios, personagensPorUsuario);
+
             switch (opcao) {
                 case 1:
                     return entrar();
@@ -43,19 +45,15 @@ public class Login {
                     System.out.println("Opção inválida.");
                     return false;
             }
-        }
-
-        else {
+        } else {
             System.out.print("Digite a sua senha: ");
             String password = scanner.next();
 
             if (usuarios.get(username).equals(password)) {
                 System.out.println("Login bem-sucedido! Bem-vindo, " + username + ".");
-                usuarioLogado = username; // armazena o nome do usuário logado
+                usuarioLogado = username; // Armazena o nome do usuário logado
                 return true;
-            }
-
-            else {
+            } else {
                 System.out.println("Senha incorreta.");
                 return false;
             }
@@ -68,37 +66,32 @@ public class Login {
 
         if (usuarios.containsKey(novoUsuario)) {
             System.out.println("Usuário já cadastrado.");
-        }
-
-        else {
+        } else {
             System.out.print("Digite a senha: ");
             String novaSenha = scanner.next();
 
-            db.inserirUsuario(novoUsuario, novaSenha);
-
-            usuarios.put(novoUsuario, novaSenha);
-            personagensPorUsuario.put(novoUsuario, new ArrayList<>()); // inicializa a lista de personagens do usuário
+            db.inserirUsuario(novoUsuario, novaSenha); // Salva no banco de dados
+            usuarios.put(novoUsuario, novaSenha); // Atualiza o mapa local
+            personagensPorUsuario.put(novoUsuario, new ArrayList<>()); // Inicializa a lista de personagens do usuário
             System.out.println("Usuário cadastrado com sucesso.");
         }
-
-        db.listarUsuarios();
     }
 
     public void cadastrarPersonagem(String usuario) {
         if (!usuarios.containsKey(usuario)) {
             System.out.println("Usuário não encontrado.");
-            return; // encerra o método se o usuário não for encontrado
+            return;
         }
 
-        List<Personagem> personagens = personagensPorUsuario.get(usuario); // obtém a lista de personagens do usuário
+        List<Personagem> personagens = personagensPorUsuario.computeIfAbsent(usuario, k -> new ArrayList<>());
 
         if (personagens.size() >= 5) {
             System.out.println("Você já cadastrou o número máximo de 5 personagens.");
-            return; // encerra o método se o número máximo for alcançado
+            return;
         }
 
         System.out.print("Digite o nome do personagem: ");
-        String nome = scanner.next(); // lê o nome do personagem
+        String nome = scanner.next();
 
         System.out.println("Escolha a classe do personagem:");
         System.out.println("1. Guerreiro");
@@ -108,49 +101,39 @@ public class Login {
         System.out.println("5. Bardo");
         System.out.println("6. Druida");
         System.out.print("Digite o número da classe: ");
-        int classeEscolhida = scanner.nextInt(); // lê a escolha da classe
+        int classeEscolhida = scanner.nextInt();
 
-        String classe = "";
-        switch (classeEscolhida) {
-            case 1:
-                classe = "Guerreiro";
-                break;
-            case 2:
-                classe = "Ladino";
-                break;
-            case 3:
-                classe = "Curandeiro";
-                break;
-            case 4:
-                classe = "Mago";
-                break;
-            case 5:
-                classe = "Bardo";
-                break;
-            case 6:
-                classe = "Druida";
-                break;
-            default:
+        String classe = switch (classeEscolhida) {
+            case 1 -> "Guerreiro";
+            case 2 -> "Ladino";
+            case 3 -> "Curandeiro";
+            case 4 -> "Mago";
+            case 5 -> "Bardo";
+            case 6 -> "Druida";
+            default -> {
                 System.out.println("Classe inválida.");
-                return; // encerra o método se a classe for inválida
-        }
+                yield null; // Aqui você "finaliza" o switch com um valor nulo
+            }
+        };
+
+        if (classe == null) {
+            return; // Se a classe for inválida, retorna do método
+        };
 
 
+        Personagem personagem = new Personagem(nome, classe);
+        personagens.add(personagem);
 
-        Personagem personagem = new Personagem(nome, classe); // cria o personagem com o nome e classe
-        personagens.add(personagem); // adiciona o personagem à lista
         System.out.println("Personagem cadastrado com sucesso.");
-
         System.out.println("Atributos do personagem:");
         System.out.println("Nome: " + personagem.getNome());
         System.out.println("Classe: " + personagem.getClasse());
-        System.out.println("Vida: " + personagem.getVida() + " (10 vida base + d10)" + personagem.getVida() + ")");
+        System.out.println("Vida: " + personagem.getVida() + " (10 vida base + d10)");
         System.out.println("Força: " + personagem.getForca() + " (d6)");
         System.out.println("Destreza: " + personagem.getDestreza() + " (d6)");
         System.out.println("Inteligência: " + personagem.getInteligencia() + " (d6)");
 
-        db.inserirPersonagem(nome, classeEscolhida, vida);
-
+        db.inserirPersonagem(nome, classeEscolhida, personagem.getVida()); // Salva no banco de dados
     }
 
     public void exibirPersonagens(String usuario) {
@@ -159,13 +142,11 @@ public class Login {
             return;
         }
 
-        List<Personagem> personagens = personagensPorUsuario.get(usuario);
+        List<Personagem> personagens = personagensPorUsuario.getOrDefault(usuario, new ArrayList<>());
 
         if (personagens.isEmpty()) {
             System.out.println("Nenhum personagem cadastrado para este usuário.");
-        }
-
-        else {
+        } else {
             System.out.println("\nPersonagens cadastrados para " + usuario + ":");
             for (Personagem personagem : personagens) {
                 System.out.println("\nNome: " + personagem.getNome());
@@ -174,12 +155,11 @@ public class Login {
                 System.out.println("Força: " + personagem.getForca());
                 System.out.println("Destreza: " + personagem.getDestreza());
                 System.out.println("Inteligência: " + personagem.getInteligencia());
-                System.out.println(); // linha em branco entre os personagens
+                System.out.println();
             }
         }
-
-        db.listarPersonagens();
     }
+
 
     public void excluirPersonagem(String usuario) {
         if (!usuarios.containsKey(usuario)) {
@@ -189,24 +169,36 @@ public class Login {
 
         List<Personagem> personagens = personagensPorUsuario.get(usuario);
 
-        if (personagens.isEmpty()) {
+        if (personagens == null || personagens.isEmpty()) {
             System.out.println("Nenhum personagem cadastrado para este usuário.");
             return;
         }
 
-        System.out.println("Escolha o número do personagem a ser excluído:");
-        for (int i = 0; i < personagens.size(); i++) {
-            System.out.println((i + 1) + ". " + personagens.get(i).getNome());
-        }
-        int numero = scanner.nextInt() - 1;
+        System.out.println("Digite o nome do personagem a ser excluído: ");
+        String nomePersonagem = scanner.next();
 
-        if (numero >= 0 && numero < personagens.size()) {
-            personagens.remove(numero);
-            System.out.println("Personagem excluído com sucesso.");
+        // Procurar o personagem pelo nome
+        Personagem personagemExcluido = null;
+        for (Personagem personagem : personagens) {
+            if (personagem.getNome().equalsIgnoreCase(nomePersonagem)) {
+                personagemExcluido = personagem;
+                break;
+            }
         }
 
-        else {
-            System.out.println("Número inválido.");
+        if (personagemExcluido != null) {
+            // Excluir no banco de dados
+            boolean sucesso = db.excluirPersonagem(nomePersonagem);
+
+            if (sucesso) {
+                // Remover da lista local
+                personagens.remove(personagemExcluido);
+                System.out.println("Personagem excluído com sucesso.");
+            } else {
+                System.out.println("Erro ao excluir o personagem no banco de dados.");
+            }
+        } else {
+            System.out.println("Personagem não encontrado.");
         }
     }
 
@@ -217,12 +209,14 @@ public class Login {
         if (usuarios.containsKey(usuario)) {
             usuarios.remove(usuario);
             personagensPorUsuario.remove(usuario);
+            db.excluirUsuario(usuario); // Adicione o método correspondente no DatabaseService
             System.out.println("Usuário excluído com sucesso.");
         }
 
         else {
             System.out.println("Usuário não encontrado.");
         }
+
     }
 
     public String getUsuarioLogado() {
